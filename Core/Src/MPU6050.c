@@ -14,7 +14,7 @@
 uint8_t MPU6050_Init(MPU6050* device, I2C_HandleTypeDef* i2c_handle) {
 
 	// Set struct parameters
-	device->i2c_handle;
+	device->i2c_handle = i2c_handle;
 
 	for (int i = 0; i < 3; i++) {
 		device->acc_g[i] = 0.0f;
@@ -67,6 +67,13 @@ uint8_t MPU6050_Init(MPU6050* device, I2C_HandleTypeDef* i2c_handle) {
 	status = MPU6050_WriteRegister(device, MPU6050_REG_INT_PIN_CFG, &reg_data);
 	err_num += (status != HAL_OK);
 
+	// INT_ENABLE : Sets interrupt generation
+	// Only the data ready interrupt is enabled
+	reg_data = 0x01;
+
+	status = MPU6050_WriteRegister(device, MPU6050_REG_INT_ENABLE, &reg_data);
+	err_num += (status != HAL_OK);
+
 	// PWR_MGMT_1 : Set power mode, clock source, and temperature sensor
 	// Device is not reset on startup, sleep is disabled and clock is enabled, the temperature sensor is enabled
 	// The clock source is set to the internal 8MHz oscillator
@@ -93,15 +100,90 @@ uint8_t MPU6050_Init(MPU6050* device, I2C_HandleTypeDef* i2c_handle) {
  */
 
 HAL_StatusTypeDef MPU6050_ReadAccelerometer(MPU6050* device) {
+	// (RM p.30)
 
+	// Read raw values from accelerometer registers
+	uint8_t reg_data[6];
+
+	HAL_StatusTypeDef status = MPU6050_ReadRegisters(device, MPU6050_REG_ACCEL_XOUT_H, reg_data, 6);
+
+	// Combine register values to give raw (unsigned) accelerometer values
+	int16_t raw_signed_data[3];
+
+	raw_signed_data[0] = (reg_data[0] << 8) | reg_data[1]; // X-axis
+	raw_signed_data[1] = (reg_data[2] << 8) | reg_data[3]; // Y-axis
+	raw_signed_data[2] = (reg_data[4] << 8) | reg_data[5]; // Z-axis
+
+	// Convert to g, Given range setting of +-4g
+	device->acc_g[0] = 0.0001220703125 * raw_signed_data[0];
+	device->acc_g[1] = 0.0001220703125 * raw_signed_data[1];
+	device->acc_g[2] = 0.0001220703125 * raw_signed_data[2];
+
+	return status;
 }
 
 HAL_StatusTypeDef MPU6050_ReadGyroscope(MPU6050* device) {
+	// (RM p.32)
 
+	// Read raw values from accelerometer registers
+	uint8_t reg_data[6];
+
+	HAL_StatusTypeDef status = MPU6050_ReadRegisters(device, MPU6050_REG_GYRO_XOUT_H, reg_data, 6);
+
+	// Combine register values to give raw (unsigned) accelerometer values
+	int16_t raw_signed_data[3];
+
+	raw_signed_data[0] = (reg_data[0] << 8) | reg_data[1]; // X-axis
+	raw_signed_data[1] = (reg_data[2] << 8) | reg_data[3]; // Y-axis
+	raw_signed_data[2] = (reg_data[4] << 8) | reg_data[5]; // Z-axis
+
+	// Convert to g, Given range setting of +-4g
+	device->acc_g[0] = 0.0152671755725 * raw_signed_data[0];
+	device->acc_g[1] = 0.0152671755725 * raw_signed_data[1];
+	device->acc_g[2] = 0.0152671755725 * raw_signed_data[2];
+
+	return status;
 }
 
 HAL_StatusTypeDef MPU6050_ReadTemperature(MPU6050* device) {
+	// (RM p.31)
 
+//	// The 16 bit TEMP_OUT value is signed, so the highest 8 bits are stored in a signed integer,
+//	// And the lowest 8 bits are stored in an unsigned integer
+//	int8_t reg_data_H;
+//	uint8_t reg_data_L;
+//
+//	// Read the raw values of the two registers
+//	HAL_StatusTypeDef status_H = MPU6050_ReadRegister(device, MPU6050_REG_TEMP_OUT_H, reg_data_H);
+//	HAL_StatusTypeDef status_L = MPU6050_ReadRegister(device, MPU6050_REG_TEMP_OUT_L, reg_data_L);
+//
+//	// Combine register values to get raw temperature data
+//	int16_t raw_data = (reg_data_H << 8) | reg_data_L;
+//
+//	// Convert to degrees Celsius
+//	device->temp_C = ((float) raw_data / 340) + 36.53f;
+//
+//	// If any of the register readings did not result in a HAL_OK, return that staus, else return HAL_OK
+//	if (status_H != HAL_OK) {
+//		return status_H;
+//	} else if (status_L != HAL_OK) {
+//		return status_L;
+//	} else {
+//		return HAL_OK;
+//	}
+
+	// Read raw values from temperature registers
+	uint8_t reg_data[2];
+
+	HAL_StatusTypeDef status = MPU6050_ReadRegisters(device, MPU6050_REG_TEMP_OUT_H, reg_data, 2);
+
+	// / Combine register values to get raw temperature data
+	uint16_t raw_data = (reg_data[0] << 8) | reg_data[1];
+
+	// Convert to degrees Celsius
+	device->temp_C = ((float) raw_data / 340) + 36.53f;
+
+	return status;
 }
 
 

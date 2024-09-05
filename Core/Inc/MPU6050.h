@@ -21,8 +21,8 @@
 
 #define WHO_AM_I 			0x68
 
-#define READ_BIT 		  	1
-#define WRITE_BIT 			0
+//#define READ_BIT 		  	1
+//#define WRITE_BIT 			0
 
 /*
  * REGISTERS (RM p.6 - 8)
