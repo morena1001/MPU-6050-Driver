@@ -56,8 +56,6 @@ uint8_t MPU6050_Init(MPU6050* device, I2C_HandleTypeDef* i2c_handle) {
 	status = MPU6050_WriteRegister(device, MPU6050_REG_ACCEL_CONFIG, &reg_data);
 	err_num += (status != HAL_OK);
 
-	// SLAVE 0 CONTROL
-
 	// INT_PIN_CFG : Set behavior of interrupt signal in INT pin
 	// Logic level is active high, pin is push-pull configured, pin is held high until interrupt is cleared,
 	// Interrupt status bits are cleared by reading INT_STATUS (REGISTER 3A), FSYNC_INT_LEVEL is active high,
@@ -178,7 +176,7 @@ HAL_StatusTypeDef MPU6050_ReadTemperature(MPU6050* device) {
 	HAL_StatusTypeDef status = MPU6050_ReadRegisters(device, MPU6050_REG_TEMP_OUT_H, reg_data, 2);
 
 	// / Combine register values to get raw temperature data
-	uint16_t raw_data = (reg_data[0] << 8) | reg_data[1];
+	int16_t raw_data = (reg_data[0] << 8) | reg_data[1];
 
 	// Convert to degrees Celsius
 	device->temp_C = ((float) raw_data / 340) + 36.53f;
@@ -194,6 +192,11 @@ HAL_StatusTypeDef MPU6050_ReadTemperature(MPU6050* device) {
 
 HAL_StatusTypeDef MPU6050_ReadRegister(MPU6050* device, uint8_t reg, uint8_t* data) {
 	return HAL_I2C_Mem_Read(device->i2c_handle, MPU6050_I2C_ADDR, reg, I2C_MEMADD_SIZE_8BIT, data, 1, HAL_MAX_DELAY);
+
+	/*
+	 * I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint16_t MemAddress,
+                                      uint16_t MemAddSize, uint8_t *pData, uint16_t Size
+	 */
 }
 
 HAL_StatusTypeDef MPU6050_ReadRegisters(MPU6050* device, uint8_t reg, uint8_t* data, uint8_t length) {
